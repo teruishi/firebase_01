@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>chatApp</title>
+
+
+
+    <style>
+        #output li {
+            background: #eef1f1;
+        }
+
+        #tradingview_fd7e7 {
+            height: 500px;
+        }
+
+        /* .FX_Chart {
+            width: auto;
+            height: 600px;
+            background-color: aqua;
+
+        } */
+
+        h1 {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>外国為替取引リアルタイムチャット</h1>
+
+    <!-- <div class="FX_Chart"></div> -->
+    <!-- TradingView Widget BEGIN -->
+    <div class="tradingview-widget-container">
+        <div id="tradingview_fd7e7">FXチャート</div>
+        <div class="tradingview-widget-copyright"><a href="https://jp.tradingview.com/" rel="noopener nofollow"
+                target="_blank"><span class="blue-text">TradingViewですべてのマーケットを追跡</span></a></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+        <script type="text/javascript">
+            new TradingView.widget(
+                {
+                    "autosize": true,
+                    "symbol": "FX:USDJPY",
+                    "interval": "15",
+                    "timezone": "Etc/UTC",
+                    "theme": "light",
+                    "style": "1",
+                    "locale": "ja",
+                    "toolbar_bg": "#f1f3f6",
+                    "enable_publishing": false,
+                    "allow_symbol_change": true,
+                    "container_id": "tradingview_fd7e7"
+                }
+            );
+        </script>
+    </div>
+    <!-- TradingView Widget END -->
+
+    <!-- 入力場所を作成しよう -->
+    <form>
+        <fieldset>
+            <legend>チャット入力画面</legend>
+            <div>
+                ユーザー名: <input type="text" id="name">
+            </div>
+            <div>
+                取引通貨:<input type="text" id="currency_type">
+            </div>
+            取引種類:<input type="text" id="order_type">
+            <div>
+                注文レート:<input type="text" id="order_rate">
+            </div>
+            <div>
+                決済レート:<input type="text" id="settlement_rate">
+            </div>
+            <div>
+                取引理由: <input type="text" id="text">
+            </div>
+            <div>
+                <button type="button" id="send">送信</button>
+            </div>
+        </fieldset>
+    </form>
+
+
+
+
+    <!-- データ出力場所 -->
+    <ul id="output"></ul>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script>
+        // 日時をいい感じの形式にする関数
+        function convertTimestampToDatetime(timestamp) {
+            const _d = timestamp ? new Date(timestamp * 1000) : new Date();
+            const Y = _d.getFullYear();
+            const m = (_d.getMonth() + 1).toString().padStart(2, '0');
+            const d = _d.getDate().toString().padStart(2, '0');
+            const H = _d.getHours().toString().padStart(2, '0');
+            const i = _d.getMinutes().toString().padStart(2, '0');
+            const s = _d.getSeconds().toString().padStart(2, '0');
+            return `${Y}/${m}/${d} ${H}:${i}:${s}`;
+        }
+        function incrementLikes(docId) {
+            const docRef = collection(db, "chat", docId);
+
+            db.runTransaction(transaction => {
+                return transaction.get(docRef).then(doc => {
+                    if (doc.exists) {
+                        const currentLikes = doc.data().likes || 0;
+                        const newLikes = currentLikes + 1;
+                        transaction.update(docRef, { likes: newLikes });
+                        return newLikes; // 更新されたいいねの数を返す
+                    }
+                });
+            }).then(newLikes => {
+                // カウントの更新後に実行したい処理をここに記述する
+                console.log("いいねの数が更新されました:", newLikes);
+                const likeCountElement = document.querySelector(`#${docId} .like-count`);
+                //  if (likeCountElement) {
+
+                //     likeCountElement.textContent = newLikes;
+            }).catch(error => {
+                console.error("いいねの数の更新中にエラーが発生しました:", error);
+            });
+        }
+
+
+
+    </script>
+    <!-- 以下にfirebaseのコードを貼り付けよう -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import {
+            getFirestore,
+            collection,
+            addDoc,
+            serverTimestamp,
+            query,
+            orderBy,
+            onSnapshot,
+        } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+
+            authDomain: "chatapp11-95e6f.firebaseapp.com",
+            projectId: "chatapp11-95e6f",
+            storageBucket: "chatapp11-95e6f.appspot.com",
+            messagingSenderId: "853332598781",
+            appId: "1:853332598781:web:ea402dc5e74e69dcc2c394"
+        };
+
+
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        // const app = firebase.initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        // const db = firebase.firestore(app);
+
+        // chatapp.html
+
+        $("#send").on("click", function () {
+            // 送信時に必要な処理
+            const postData = {
+                name: $("#name").val(),
+                currency_type: $("#currency_type").val(),
+                order_type: $("#order_type").val(),
+                order_rate: $("#order_rate").val(),
+                settlement_rate: $("#settlement_rate").val(),
+                text: $("#text").val(),
+                time: serverTimestamp(),
+                likes: 0, // 初期値として0を設定
+            };
+            addDoc(collection(db, "chat"), postData);
+            $("#text").val("");
+        });
+        const q = query(collection(db, "chat"), orderBy("time", "desc"));
+
+        onSnapshot(q, (querySnapshot) => {
+            console.log(querySnapshot.docs);
+
+            const documents = [];
+            querySnapshot.docs.forEach(function (doc) {
+                const document = {
+                    id: doc.id,
+                    data: doc.data(),
+                };
+                documents.push(document);
+            });
+
+            console.log(documents);
+
+            const htmlElements = [];
+            documents.forEach(function (document) {
+                htmlElements.push(`
+        <li id="${document.id}">
+            <button class="like-btn" onclick="incrementLikes('${document.id}')">&#128077;</button>
+            <span class="like-count">${document.data.likes || 0}</span>
+           
+            
+
+      <p>ユーザー名:${document.data.name}</p>
+      <p>登録時間:${convertTimestampToDatetime(document.data.time.seconds)}</p>
+      <p>取引通貨:${document.data.currency_type}</p>
+      <p>取引種類:${document.data.order_type}</p>
+      <p>注文レート:${document.data.order_rate}</p>
+      <p>決済レート:${document.data.settlement_rate}</p>
+      <p>注文理由:${document.data.text}</p>
+    </li>
+  `);
+            });
+
+            $("#output").html(htmlElements);
+
+
+        });
+
+    </script>
+
+
+</body>
+
+</html>
+<!-- <button class="like-btn" onclick="incrementLikes('${document.id}')">いいね</button> -->
